@@ -1,6 +1,8 @@
 package ru.skillbranch.sbdelivery.ui.main
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -32,11 +34,15 @@ class MainFragment : Fragment() {
 
     private val categoriesAdapter by lazy {
         CategoriesDelegate().createAdapter {
-            // TODO handle click
+            viewModel.filterDishesByCategory(it.categoryId)
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentMainBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -61,6 +67,7 @@ class MainFragment : Fragment() {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun renderState(state: MainState) {
         binding.progressProduct.isVisible = state == MainState.Loader
 
@@ -92,6 +99,7 @@ class MainFragment : Fragment() {
                     .commit()
                 true
             }
+
             else -> super.onOptionsItemSelected(item)
         }
 

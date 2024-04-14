@@ -1,9 +1,11 @@
 package ru.skillbranch.sbdelivery.domain
 
+import android.util.Log
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Single
 import ru.skillbranch.sbdelivery.domain.entity.DishEntity
 import ru.skillbranch.sbdelivery.repository.DishesRepositoryContract
+import ru.skillbranch.sbdelivery.repository.error.EmptyDishesError
 import java.util.*
 
 class SearchUseCaseImpl(private val repository: DishesRepositoryContract) : SearchUseCase {
@@ -15,7 +17,22 @@ class SearchUseCaseImpl(private val repository: DishesRepositoryContract) : Sear
         repository.getCachedDishes().toObservable()
             .map { dishes ->
                 dishes.filter {
-                    it.title.toLowerCase(Locale.ROOT).contains(searchText.trim().toLowerCase(Locale.ROOT))
+                    it.title.lowercase(Locale.ROOT).contains(searchText.trim()
+                        .lowercase(Locale.ROOT))
                 }
             }
+
+//    override fun findDishesByName(searchText: String): Observable<List<DishEntity>> {
+//        return repository.getCachedDishes()
+//            .flatMapObservable { dishes ->
+//                val list =
+//                    dishes.filter { dish -> dish.title.contains(searchText, ignoreCase = true) }
+//
+////                if (list.isEmpty()) {
+////                    Observable.error(EmptyDishesError("No dishes found"))
+////                } else {
+//                    Observable.just(list)
+////                }
+//            }
+//    }
 }

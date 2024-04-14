@@ -1,17 +1,21 @@
 package ru.skillbranch.sbdelivery.ui.main
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import ru.skillbranch.sbdelivery.core.BaseViewModel
 import ru.skillbranch.sbdelivery.core.adapter.ProductItemState
 import ru.skillbranch.sbdelivery.core.notifier.BasketNotifier
 import ru.skillbranch.sbdelivery.core.notifier.event.BasketEvent
+import ru.skillbranch.sbdelivery.domain.filter.CategoriesFilterUseCase
 import ru.skillbranch.sbdelivery.repository.DishesRepositoryContract
 import ru.skillbranch.sbdelivery.repository.error.EmptyDishesError
 import ru.skillbranch.sbdelivery.repository.mapper.CategoriesMapper
 import ru.skillbranch.sbdelivery.repository.mapper.DishesMapper
 
 class MainViewModel(
+    private val useCase: CategoriesFilterUseCase,
     private val repository: DishesRepositoryContract,
     private val dishesMapper: DishesMapper,
     private val categoriesMapper: CategoriesMapper,
@@ -32,6 +36,26 @@ class MainViewModel(
             .doOnSubscribe { action.value = defaultState }
             .flatMap { dishes -> repository.getCategories().map { it to dishes } }
             .map { categoriesMapper.mapDtoToState(it.first) to dishesMapper.mapDtoToState(it.second) }
+            .subscribe({
+                val newState = MainState.Result(it.second, it.first)
+                action.value = newState
+            }, {
+                if (it is EmptyDishesError) {
+                    action.value = MainState.Error(it.messageDishes, it)
+                } else {
+                    action.value = MainState.Error("Что то пошло не по плану", it)
+                }
+                it.printStackTrace()
+            }).track()
+    }
+
+    fun filterDishesByCategory(categoryId: String) {
+        useCase.categoryFilterDishes(categoryId)
+            .doOnSubscribe { action.value = defaultState }
+            .flatMap { dishes -> repository.getCategories().map { it to dishes } }
+            .map { categoriesMapper.mapDtoToState(it.first) to dishesMapper.mapDtoToState(it.second) }
+//            .map { dishesMapper.mapDtoToState(it) }
+            .observeOn(AndroidSchedulers.mainThread())
             .subscribe({
                 val newState = MainState.Result(it.second, it.first)
                 action.value = newState

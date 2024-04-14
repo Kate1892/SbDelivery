@@ -13,11 +13,11 @@ import ru.skillbranch.sbdelivery.repository.error.EmptyDishesError
 class CategoriesFilterUseCaseTest {
 
     private val repository = mock<DishesRepositoryContract>()
-    private lateinit var useCase: CategoriesFilterUseCase
+    private lateinit var useCase: CategoriesFilterUseCaseUseCaseImpl
 
     @Before
     fun setUp() {
-        useCase = CategoriesFilterUseCase(repository)
+        useCase = CategoriesFilterUseCaseUseCaseImpl(repository)
     }
 
     @Test
