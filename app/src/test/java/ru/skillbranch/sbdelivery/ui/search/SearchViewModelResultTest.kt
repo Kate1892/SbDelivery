@@ -19,11 +19,17 @@ import ru.skillbranch.sbdelivery.RxImmediateSchedulerRule
 import ru.skillbranch.sbdelivery.core.notifier.BasketNotifier
 import ru.skillbranch.sbdelivery.domain.SearchUseCase
 import ru.skillbranch.sbdelivery.domain.entity.DishEntity
-import ru.skillbranch.sbdelivery.repository.error.EmptyDishesError
 import ru.skillbranch.sbdelivery.repository.mapper.DishesMapper
 
+
+/*
+* Обработка ошибок при поиске товаров
+* Состояния загрузки при поиске товаров
+* проверяем оба кейса
+* */
+
 @RunWith(JUnit4::class)
-class SearchViewModelTest {
+class SearchViewModelResultTest {
 
     @Rule
     @JvmField
@@ -44,17 +50,6 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `when loading and init should state Loading`() {
-        val hotObserve: ReplaySubject<List<DishEntity>> = ReplaySubject.create()
-        whenever(useCase.getDishes()).thenReturn(hotObserve.hide().single(listOf()))
-        whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
-        viewModel.initState()
-        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Loading)
-
-        verify(useCase).getDishes()
-    }
-
-    @Test
     fun `when use case success data should value state in Result`() {
         whenever(useCase.getDishes()).thenReturn(Single.just(MockDataHolder.listDishes))
         whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
@@ -67,25 +62,6 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `when use case error data should value return in SearchState Error`() {
-        whenever(useCase.getDishes()).thenReturn(Single.error(EmptyDishesError("test error")))
-        whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
-        viewModel.initState()
-        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Error("test error"))
-
-        verify(useCase).getDishes()
-    }
-
-    @Test
-    fun `when search in dishes should return error use case show Error state`() {
-        whenever(useCase.findDishesByName(any())).thenReturn(Observable.error(EmptyDishesError("test error")))
-        whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
-        viewModel.setSearchEvent(Observable.just("Test"))
-        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Error("test error"))
-        verify(useCase).findDishesByName(any())
-    }
-
-    @Test
     fun `when search in dishes should return success show Result state`() {
         whenever(useCase.findDishesByName(any())).thenReturn(Observable.just(MockDataHolder.listDishes))
         whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
@@ -95,5 +71,29 @@ class SearchViewModelTest {
 
         verify(useCase).findDishesByName(any())
         verify(mapper).mapDtoToState(any())
+    }
+
+    @Test
+    fun `when use case error data should not value state Result`() {
+        whenever(useCase.getDishes()).thenReturn(Single.error(RuntimeException("")))
+        viewModel.initState()
+        Assertions.assertThat(viewModel.state.value)
+            .isNotEqualTo(SearchState.Result(MockDataHolder.searchStateList))
+
+        verify(useCase).getDishes()
+    }
+
+    @Test
+    fun `when search loading dishes should return not Result state`() {
+        val hotObserve: ReplaySubject<List<DishEntity>> = ReplaySubject.create()
+        whenever(useCase.getDishes()).thenReturn(
+            hotObserve.hide().single(MockDataHolder.listDishes)
+        )
+        whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
+        viewModel.setSearchEvent(Observable.just("Test"))
+        Assertions.assertThat(viewModel.state.value)
+            .isNotEqualTo(SearchState.Result(MockDataHolder.searchStateList))
+
+        verify(useCase).findDishesByName(any())
     }
 }

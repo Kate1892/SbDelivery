@@ -46,6 +46,6 @@ class DishesRepository(
     }
 
     override fun findDishesByName(searchText: String): Observable<List<DishEntity>> {
-        return TODO("Сделать поиск через дао")
+        return  dishesDao.findDishesByName(searchText)
     }
 }

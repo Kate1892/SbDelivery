@@ -53,6 +53,12 @@ object AppModule {
                 notifier = get()
             )
         }
-        viewModel { SearchViewModel(useCase = get(), mapper = get()) }
+        viewModel {
+            SearchViewModel(
+                useCase = get(),
+                mapper = get(),
+                notifier = get()
+            )
+        }
     }
 }

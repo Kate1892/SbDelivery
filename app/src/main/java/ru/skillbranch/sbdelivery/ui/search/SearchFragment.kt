@@ -25,7 +25,7 @@ class SearchFragment : Fragment() {
     private val binding get() = _binding!!
     private val adapter by lazy {
         ProductDelegate().createAdapter {
-            // TODO handle click
+            viewModel.handleAddBasket(it)
         }
     }
 
@@ -47,6 +47,11 @@ class SearchFragment : Fragment() {
         val searchEvent =
             binding.searchInput.queryTextChanges().skipInitialValue().map { it.toString() }
         viewModel.setSearchEvent(searchEvent)
+
+        binding.btnRetry.setOnClickListener {
+            binding.searchInput.setQuery("", true)
+            viewModel.setSearchEvent(searchEvent)
+        }
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -56,6 +61,9 @@ class SearchFragment : Fragment() {
         binding.rvProductGrid.isVisible = searchState is SearchState.Result
 
         binding.tvErrorMessage.isVisible = searchState is SearchState.Error
+
+        binding.btnRetry.isVisible =
+            searchState is SearchState.Error && searchState.errorDescription != "Ничего такого не нашлось"
 
         if (searchState is SearchState.Result) {
             adapter.items = searchState.items

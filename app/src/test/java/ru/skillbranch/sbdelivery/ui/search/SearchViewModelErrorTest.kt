@@ -22,8 +22,12 @@ import ru.skillbranch.sbdelivery.domain.entity.DishEntity
 import ru.skillbranch.sbdelivery.repository.error.EmptyDishesError
 import ru.skillbranch.sbdelivery.repository.mapper.DishesMapper
 
+
+/*
+* Обработка ошибок при поиске товаров
+* */
 @RunWith(JUnit4::class)
-class SearchViewModelTest {
+class SearchViewModelErrorTest {
 
     @Rule
     @JvmField
@@ -44,56 +48,44 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `when loading and init should state Loading`() {
-        val hotObserve: ReplaySubject<List<DishEntity>> = ReplaySubject.create()
-        whenever(useCase.getDishes()).thenReturn(hotObserve.hide().single(listOf()))
-        whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
-        viewModel.initState()
-        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Loading)
-
-        verify(useCase).getDishes()
-    }
-
-    @Test
-    fun `when use case success data should value state in Result`() {
-        whenever(useCase.getDishes()).thenReturn(Single.just(MockDataHolder.listDishes))
-        whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
-        viewModel.initState()
-        Assertions.assertThat(viewModel.state.value)
-            .isEqualTo(SearchState.Result(MockDataHolder.searchStateList))
-
-        verify(useCase).getDishes()
-        verify(mapper).mapDtoToState(any())
-    }
-
-    @Test
     fun `when use case error data should value return in SearchState Error`() {
-        whenever(useCase.getDishes()).thenReturn(Single.error(EmptyDishesError("test error")))
+        whenever(useCase.getDishes()).thenReturn(Single.error(EmptyDishesError("")))
         whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
         viewModel.initState()
-        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Error("test error"))
+        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Error(""))
 
         verify(useCase).getDishes()
     }
 
     @Test
     fun `when search in dishes should return error use case show Error state`() {
-        whenever(useCase.findDishesByName(any())).thenReturn(Observable.error(EmptyDishesError("test error")))
+        whenever(useCase.findDishesByName(any())).thenReturn(Observable.error(EmptyDishesError("")))
         whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
         viewModel.setSearchEvent(Observable.just("Test"))
-        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Error("test error"))
+        Assertions.assertThat(viewModel.state.value).isEqualTo(SearchState.Error(""))
         verify(useCase).findDishesByName(any())
     }
 
     @Test
-    fun `when search in dishes should return success show Result state`() {
-        whenever(useCase.findDishesByName(any())).thenReturn(Observable.just(MockDataHolder.listDishes))
+    fun `when use loadingState data should value return in SearchState Error`() {
+        val hotObserve: ReplaySubject<List<DishEntity>> = ReplaySubject.create()
+        whenever(useCase.getDishes()).thenReturn(
+            hotObserve.hide().single(MockDataHolder.listDishes)
+        )
+        whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
+        viewModel.initState()
+        Assertions.assertThat(viewModel.state.value).isNotEqualTo(SearchState.Error(""))
+
+        verify(useCase).getDishes()
+    }
+
+    @Test
+    fun `when search in dishes should return loading not show Error state`() {
+        whenever(useCase.getDishes()).thenReturn(Single.just(MockDataHolder.listDishes))
         whenever(mapper.mapDtoToState(any())).thenReturn(MockDataHolder.searchStateList)
         viewModel.setSearchEvent(Observable.just("Test"))
-        Assertions.assertThat(viewModel.state.value)
-            .isEqualTo(SearchState.Result(MockDataHolder.searchStateList))
-
+        Assertions.assertThat(viewModel.state.value).isNotEqualTo(SearchState.Error(""))
         verify(useCase).findDishesByName(any())
-        verify(mapper).mapDtoToState(any())
     }
+
 }

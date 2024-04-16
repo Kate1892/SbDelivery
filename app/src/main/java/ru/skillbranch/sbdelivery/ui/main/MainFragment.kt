@@ -13,6 +13,7 @@ import ru.skillbranch.sbdelivery.core.adapter.CategoriesDelegate
 import ru.skillbranch.sbdelivery.core.adapter.ProductDelegate
 import ru.skillbranch.sbdelivery.core.decor.GridPaddingItemDecoration
 import ru.skillbranch.sbdelivery.databinding.FragmentMainBinding
+import ru.skillbranch.sbdelivery.repository.error.EmptyDishesError
 import ru.skillbranch.sbdelivery.ui.basket.BasketFragment
 import ru.skillbranch.sbdelivery.ui.search.SearchFragment
 
@@ -71,11 +72,16 @@ class MainFragment : Fragment() {
     private fun renderState(state: MainState) {
         binding.progressProduct.isVisible = state == MainState.Loader
 
-        binding.rvProductGrid.isVisible = state is MainState.Result
+        binding.rvProductGrid.isVisible =
+            state is MainState.Result && state.productItems.isNotEmpty()
+
         binding.rvCategories.isVisible = state is MainState.Result && state.categories.isNotEmpty()
+                || (state is MainState.Error && state.error is EmptyDishesError)
+
         binding.toolbar.isVisible = state is MainState.Result
-        binding.tvErrorMessage.isVisible = state is MainState.Error
-        binding.btnRetry.isVisible = state is MainState.Error
+        binding.tvErrorMessage.isVisible =
+            state is MainState.Error || (state is MainState.Result && state.productItems.isEmpty())
+        binding.btnRetry.isVisible = state is MainState.Error && state.error !is EmptyDishesError
         if (state is MainState.Result) {
             _binding?.btnBasket?.isVisible = true
             categoriesAdapter.items = state.categories
