@@ -21,17 +21,13 @@ class CartRepository @Inject constructor(
 ) : ICartRepository {
 
     override suspend fun loadItems(): List<CartItem> = cartDao.findCartItems()
-        .map{ it.toCartItem() }
+        .map { it.toCartItem() }
 
-    override suspend fun incrementItem(dishId: String)  = cartDao.incrementItemCount(dishId)
+    override suspend fun incrementItem(dishId: String) = cartDao.incrementItemCount(dishId)
 
     override suspend fun decrementItem(dishId: String) = cartDao.decrementItemCount(dishId)
 
-    override suspend fun removeItem(dishId: String) {
-        TODO("Not yet implemented")
-    }
+    override suspend fun removeItem(dishId: String) = cartDao.removeItem(dishId)
 
-    override suspend fun clearCart() {
-        TODO("Not yet implemented")
-    }
+    override suspend fun clearCart() = cartDao.clearCart()
 }

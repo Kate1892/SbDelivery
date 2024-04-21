@@ -1,8 +1,11 @@
 package ru.skillbranch.sbdelivery.repository
 
+import android.util.Log
 import ru.skillbranch.sbdelivery.data.db.dao.CartDao
 import ru.skillbranch.sbdelivery.data.db.dao.DishesDao
+import ru.skillbranch.sbdelivery.data.db.entity.CartItemPersist
 import ru.skillbranch.sbdelivery.data.network.RestService
+import ru.skillbranch.sbdelivery.data.network.req.ReviewReq
 import ru.skillbranch.sbdelivery.data.network.res.ReviewRes
 import ru.skillbranch.sbdelivery.data.toDishContent
 import ru.skillbranch.sbdelivery.screens.dish.data.DishContent
@@ -25,19 +28,28 @@ class DishRepository @Inject constructor(
     override suspend fun findDish(id: String): DishContent = dishesDao.findDish(id).toDishContent()
 
     override suspend fun addToCart(id: String, count: Int) {
-        TODO("Not yet implemented")
+        val countInCart = cartDao.dishCount(id) ?: 0
+        if (countInCart > 0) cartDao.updateItemCount(id, countInCart + count)
+        else cartDao.addItem(CartItemPersist(dishId = id, count = count))
     }
 
     override suspend fun cartCount(): Int {
-        TODO("Not yet implemented")
+        return cartDao.cartCount() ?: 0
     }
 
     override suspend fun loadReviews(dishId: String): List<ReviewRes> {
-        //TODO
-        return emptyList()
+        val reviews = mutableListOf<ReviewRes>()
+        var offset = 0
+        while (true) {
+            val res = api.getReviews(dishId, offset * 10, 10)
+            if (res.isSuccessful) {
+                offset++
+                reviews.addAll(res.body() ?: emptyList())
+            } else break
+        }
+        return reviews
     }
 
-    override suspend fun sendReview(id: String, rating: Int, review: String): ReviewRes {
-        TODO("Not yet implemented")
-    }
+    override suspend fun sendReview(id: String, rating: Int, review: String): ReviewRes =
+        api.sendReview(id, ReviewReq(rating, review))
 }

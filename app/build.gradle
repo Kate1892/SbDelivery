@@ -24,6 +24,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    buildscript {
+        dependencies {
+            classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -36,7 +43,7 @@ android {
     }
     composeOptions {
         kotlinCompilerVersion "1.9.23"
-        kotlinCompilerExtensionVersion "1.6.6"
+        kotlinCompilerExtensionVersion "1.5.12"
     }
     testOptions {
         unitTests.returnDefaultValues = true
