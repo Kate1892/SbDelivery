@@ -26,10 +26,10 @@ import coil.annotation.ExperimentalCoilApi
 import coil.compose.ImagePainter
 import coil.compose.rememberImagePainter
 import ru.skillbranch.sbdelivery.R
-import ru.skillbranch.sbdelivery.screens.cart.data.CartItem
+import ru.skillbranch.sbdelivery.domain.CartItem
 import ru.skillbranch.sbdelivery.screens.root.ui.AppTheme
 
-@OptIn(ExperimentalCoilApi::class)
+@ExperimentalCoilApi
 @Composable
 fun CartListItem(
     dish: CartItem,
@@ -42,7 +42,6 @@ fun CartListItem(
         ConstraintLayout() {
 
             val (title, poster, price, stepper) = createRefs()
-
             val painter = rememberImagePainter(
                 data = dish.image,
                 builder = {
@@ -65,7 +64,7 @@ fun CartListItem(
                         bottom.linkTo(parent.bottom)
                     }
                     .clip(RoundedCornerShape(8.dp))
-            )
+                )
             Text(
                 fontSize = 18.sp,
                 color = MaterialTheme.colors.onPrimary,
@@ -121,9 +120,10 @@ fun CartStepper(
     onIncrement: () -> Unit,
     onRemove: () -> Unit
 ) {
-    Row(modifier
-        .height(32.dp)
-        .animateContentSize()
+    Row(
+        modifier
+            .height(32.dp)
+            .animateContentSize()
     ){
         Row(
             modifier = modifier
@@ -216,30 +216,34 @@ fun CartStepper(
 
 @Preview
 @Composable
-fun CartStepperRemovePreview(){
+fun CartListPreview(){
+    val dish = CartItem("0","", "test",1,200)
     AppTheme {
-        CartStepper(value = 1, onDecrement = {}, onIncrement = {}, onRemove = {})
-    }
-}
-
-@Preview
-@Composable
-fun CartStepperIdlePreview(){
-    AppTheme {
-        CartStepper(value = 2, onDecrement = {}, onIncrement = {}, onRemove = {})
+        CartListItem(dish, onProductClick = {_,_ ->}, onIncrement = {}, onDecrement = {}, onRemove = {_,_ ->})
     }
 }
 
 @Preview
 @Composable
 fun CartItemPreview(){
-    val dish = CartItem("0","", "test", 2, 100)
+    val dish = CartItem("0","", "test",1,200)
     AppTheme {
-        CartListItem(
-            dish = dish,
-            onProductClick = { a, b -> },
-            onIncrement = {},
-            onDecrement = {},
-            onRemove = { a, b -> })
+        CartListItem(dish, onProductClick = {_,_ ->}, onIncrement = {}, onDecrement = {}, onRemove = {_,_ ->})
+    }
+}
+
+@Preview
+@Composable
+fun StepperInitialPreview(){
+    AppTheme {
+        CartStepper(1,onDecrement = {}, onIncrement = {}, onRemove = {})
+    }
+}
+
+@Preview
+@Composable
+fun StepperPreview(){
+    AppTheme {
+        CartStepper(2,onDecrement = {}, onIncrement = {}, onRemove = {})
     }
 }

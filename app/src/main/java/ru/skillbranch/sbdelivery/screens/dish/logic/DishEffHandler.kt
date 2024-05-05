@@ -1,74 +1,66 @@
 package ru.skillbranch.sbdelivery.screens.dish.logic
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import android.util.Log
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.map
+import ru.skillbranch.sbdelivery.screens.root.logic.Msg
 import ru.skillbranch.sbdelivery.repository.DishRepository
 import ru.skillbranch.sbdelivery.screens.root.logic.Eff
 import ru.skillbranch.sbdelivery.screens.root.logic.IEffectHandler
-import ru.skillbranch.sbdelivery.screens.root.logic.Msg
 import javax.inject.Inject
+import kotlin.coroutines.coroutineContext
 
 class DishEffHandler @Inject constructor(
     private val repository: DishRepository,
-    private val notifyChannel: Channel<Eff.Notification>,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val notifyChanel: Channel<Eff.Notification>,
+    override var localJob: Job
 ) : IEffectHandler<DishFeature.Eff, Msg> {
 
-    private var localJob: Job? = null
+    private val errHandler = CoroutineExceptionHandler{_, t ->
+        t.printStackTrace()
+        t.message?.let { notifyChanel.trySend(Eff.Notification.Error(it)) }
+    }
 
-    override suspend fun handle(effect: DishFeature.Eff, commit: (Msg) -> Unit) {
-
-        if (localJob == null) localJob = Job()
-        withContext(localJob!! + dispatcher) {
-            when (effect) {
-                is DishFeature.Eff.AddToCart -> {
-                    repository.addToCart(effect.id, effect.count)
-                    commit(Msg.UpdateCartCount(repository.cartCount()))
-                    notifyChannel.send(
-                        Eff.Notification.Text("В корзину добавлено ${effect.count} товаров")
-                    )
+    override suspend fun handle(eff: DishFeature.Eff, commit: (Msg) -> Unit) {
+        CoroutineScope(coroutineContext + localJob + errHandler).launch {
+            when (eff) {
+                is DishFeature.Eff.LoadDish -> {
+                    repository.findDish(eff.dishId)
+                        .map(DishFeature.Msg::ShowDish)
+                        .map(Msg::Dish)
+                        .collect { commit(it) }
                 }
 
-                is DishFeature.Eff.LoadDish -> {
-                    val dish = repository.findDish(effect.dishId)
-                    commit(DishFeature.Msg.ShowDish(dish).toMsg())
+                is DishFeature.Eff.AddToCart -> {
+                    repository.addToCart(eff.id, eff.count)
+                    repository.cartCount()
+                        .let(Msg::UpdateCartCount)
+                        .also(commit)
+                    notifyChanel.send(Eff.Notification.Text("В корзину добавлено ${eff.count} товаров"))
                 }
 
                 is DishFeature.Eff.LoadReviews -> {
-                    try {
-                        val reviews = repository.loadReviews(effect.dishId)
-                        commit(DishFeature.Msg.ShowReviews(reviews).toMsg())
-                    } catch (t: Throwable) {
-                        notifyChannel.send(Eff.Notification.Error(t.message ?: "something error"))
-                    }
+                    repository.loadReviews(eff.dishId)
+                        .let(DishFeature.Msg::ShowReviews)
+                        .let(Msg::Dish)
+                        .also(commit)
                 }
 
                 is DishFeature.Eff.SendReview -> {
-                    try {
-                        val review = repository.sendReview(effect.id, effect.rating, effect.review)
-                        val newReviews = repository.loadReviews(effect.id) + review
-                        commit(DishFeature.Msg.ShowReviews(newReviews).toMsg())
-                        notifyChannel.send(Eff.Notification.Text("Отзыв успешно отправлен"))
-                    } catch (t: Throwable) {
-                        notifyChannel.send(Eff.Notification.Error(t.message ?: "something error"))
-                    }
-                }
+                    val review = repository.sendReview(eff.id, eff.rating, eff.review)
 
-                is DishFeature.Eff.Terminate -> {
-                    localJob?.cancel("Terminate coroutine scope")
-                    localJob = null
+                    repository.loadReviews(eff.id).plus(review)
+                        .let(DishFeature.Msg::ShowReviews)
+                        .let(Msg::Dish)
+                        .also(commit)
+                    notifyChanel.send(Eff.Notification.Text("Отзыв успешно отправлен"))
                 }
             }
         }
 
     }
-
-    private fun DishFeature.Msg.toMsg(): Msg = Msg.Dish(this)
-
 }
 
 

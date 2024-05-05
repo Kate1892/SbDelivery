@@ -3,24 +3,23 @@ package ru.skillbranch.sbdelivery.data.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import ru.skillbranch.sbdelivery.data.db.dao.CartDao
+import ru.skillbranch.sbdelivery.data.db.dao.CategoriesDao
 import ru.skillbranch.sbdelivery.data.db.dao.DishesDao
-import ru.skillbranch.sbdelivery.data.db.entity.CartItemDbView
-import ru.skillbranch.sbdelivery.data.db.entity.CartItemPersist
-import ru.skillbranch.sbdelivery.data.db.entity.DishPersist
+import ru.skillbranch.sbdelivery.data.db.entity.*
 
 @Database(
-    entities = [DishPersist::class, CartItemPersist::class],
-    views = [CartItemDbView::class],
+    entities = [DishPersist::class, CartItemPersist::class, DishLikedPersist::class, CategoryPersist::class],
+    views = [CartItemDV::class, DishItemDV::class, CategoryItemDV::class, DishDV::class],
     version = AppDb.DATABASE_VERSION,
     exportSchema = false
 )
 abstract class AppDb : RoomDatabase() {
-    //TODO
     companion object {
-        const val DATABASE_NAME = "sdfsdf" + ".db"
+        const val DATABASE_NAME = "name" + ".db"
         const val DATABASE_VERSION = 1
     }
 
     abstract fun dishesDao(): DishesDao
     abstract fun cartDao(): CartDao
+    abstract fun categoryDao(): CategoriesDao
 }

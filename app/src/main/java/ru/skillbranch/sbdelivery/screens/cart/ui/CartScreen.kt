@@ -12,12 +12,17 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.annotation.ExperimentalCoilApi
 import ru.skillbranch.sbdelivery.screens.cart.logic.CartFeature
 import ru.skillbranch.sbdelivery.screens.cart.data.CartUiState
 import ru.skillbranch.sbdelivery.screens.cart.data.ConfirmDialogState
+import ru.skillbranch.sbdelivery.screens.root.logic.Msg
 
+@ExperimentalCoilApi
 @Composable
-fun CartScreen(state: CartFeature.State, accept: (CartFeature.Msg) -> Unit) {
+fun CartScreen(state: CartFeature.State, accept: (Msg) -> Unit) {
+
+
     when (state.list) {
         is CartUiState.Value -> {
             Column() {
@@ -29,31 +34,24 @@ fun CartScreen(state: CartFeature.State, accept: (CartFeature.Msg) -> Unit) {
                         items(items = items, key = { it.id }) {
                             CartListItem(it,
                                 onProductClick = { dishId: String, title: String ->
-                                    accept(
-                                        CartFeature.Msg.ClickOnDish(dishId, title)
-                                    )
+                                    CartFeature.Msg.ClickOnDish(dishId, title)
+                                        .let(Msg::Cart)
+                                        .also(accept)
                                 },
                                 onIncrement = { dishId ->
-                                    accept(
-                                        CartFeature.Msg.IncrementCount(
-                                            dishId
-                                        )
-                                    )
+                                    CartFeature.Msg.IncrementCount(dishId)
+                                        .let(Msg::Cart)
+                                        .also(accept)
                                 },
                                 onDecrement = { dishId ->
-                                    accept(
-                                        CartFeature.Msg.DecrementCount(
-                                            dishId
-                                        )
-                                    )
+                                    CartFeature.Msg.DecrementCount(dishId)
+                                        .let(Msg::Cart)
+                                        .also(accept)
                                 },
                                 onRemove = { dishId, title ->
-                                    accept(
-                                        CartFeature.Msg.ShowConfirm(
-                                            dishId,
-                                            title
-                                        )
-                                    )
+                                    CartFeature.Msg.ShowConfirm(dishId, title)
+                                        .let(Msg::Cart)
+                                        .also(accept)
                                 }
                             )
                         }
@@ -85,10 +83,12 @@ fun CartScreen(state: CartFeature.State, accept: (CartFeature.Msg) -> Unit) {
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = {
-                            val order = state.list.dishes.map {
-                                it.id to it.count
-                            }.toMap()
-                            accept(CartFeature.Msg.SendOrder(order))
+                            val order = state.list.dishes
+                                .map { it.id to it.count }
+                                .toMap()
+                            CartFeature.Msg.SendOrder(order)
+                                .let(Msg::Cart)
+                                .also(accept)
                         },
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor = MaterialTheme.colors.secondary,
@@ -104,7 +104,6 @@ fun CartScreen(state: CartFeature.State, accept: (CartFeature.Msg) -> Unit) {
             }
 
         }
-
         is CartUiState.Empty -> Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
@@ -122,7 +121,11 @@ fun CartScreen(state: CartFeature.State, accept: (CartFeature.Msg) -> Unit) {
 
     if (state.confirmDialog is ConfirmDialogState.Show) {
         AlertDialog(
-            onDismissRequest = { accept(CartFeature.Msg.HideConfirm) },
+            onDismissRequest = {
+                CartFeature.Msg.HideConfirm
+                    .let(Msg::Cart)
+                    .also(accept)
+            },
             backgroundColor = Color.White,
             contentColor = MaterialTheme.colors.primary,
             title = { Text(text = "Вы уверены?") },
@@ -130,13 +133,21 @@ fun CartScreen(state: CartFeature.State, accept: (CartFeature.Msg) -> Unit) {
             buttons = {
                 Row {
                     TextButton(
-                        onClick = { accept(CartFeature.Msg.HideConfirm) },
+                        onClick = {
+                            CartFeature.Msg.HideConfirm
+                                .let(Msg::Cart)
+                                .also(accept)
+                        },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Нет", color = MaterialTheme.colors.secondary)
                     }
                     TextButton(
-                        onClick = { accept(CartFeature.Msg.RemoveFromCart(dishId = state.confirmDialog.id)) },
+                        onClick = {
+                            CartFeature.Msg.RemoveFromCart(state.confirmDialog.id)
+                                .let(Msg::Cart)
+                                .also(accept)
+                        },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Да", color = MaterialTheme.colors.secondary)

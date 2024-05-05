@@ -1,7 +1,6 @@
-package ru.skillbranch.sbdelivery.screens.dishes.ui
+package ru.skillbranch.sbdelivery.screens.components
 
-//import ru.skillbranch.sbdelivery.screens.root.NavigateCommand
-import android.util.Log
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,13 +9,17 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -24,51 +27,130 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import ru.skillbranch.sbdelivery.R
-import ru.skillbranch.sbdelivery.screens.dishes.logic.DishesFeature
-import ru.skillbranch.sbdelivery.screens.root.logic.NavigateCommand
+import ru.skillbranch.sbdelivery.screens.dishes.logic.DishesMsg
+import ru.skillbranch.sbdelivery.screens.dishes.logic.DishesState
 import ru.skillbranch.sbdelivery.screens.root.ui.AppTheme
-import ru.skillbranch.sbdelivery.screens.root.ui.CartButton
+
+@Composable
+fun DefaultToolbar(
+    title: String,
+    cartCount: Int,
+    canBack: Boolean = false,
+    onCart: () -> Unit,
+    onDrawer: () -> Unit
+) {
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current!!.onBackPressedDispatcher
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1
+            )
+        },
+        navigationIcon = {
+            if (!canBack) {
+                IconButton(
+                    onClick = onDrawer,
+                    content = {
+                        Icon(
+                            tint = MaterialTheme.colors.secondary,
+                            painter = painterResource(R.drawable.ic_baseline_menu_24),
+                            contentDescription = "home"
+                        )
+                    })
+            } else {
+                IconButton(
+                    onClick = { dispatcher.onBackPressed() },
+                    content = {
+                        Icon(
+                            tint = MaterialTheme.colors.secondary,
+                            painter = painterResource(R.drawable.ic_baseline_arrow_back_24),
+                            contentDescription = "back"
+                        )
+                    })
+            }
+
+        },
+        actions = {
+            CartButton(cartCount = cartCount, onCart = onCart)
+        }
+    )
+}
+
+@Composable
+fun CartButton(cartCount: Int, onCart: () -> Unit) {
+    IconButton(
+        onClick = onCart,
+        content = {
+            Icon(
+                tint = MaterialTheme.colors.secondary,
+                painter = painterResource(R.drawable.ic_baseline_shopping_cart_24),
+                contentDescription = "Cart"
+            )
+            if (cartCount > 0) {
+                Text(
+                    text = "$cartCount",
+                    color = MaterialTheme.colors.primary,
+                    textAlign = TextAlign.Center,
+                    fontSize = 8.sp,
+                    modifier = Modifier
+                        .offset(10.dp, (-10).dp)
+                        .size(12.dp)
+                        .background(
+                            Color.White, shape = RoundedCornerShape(6.dp)
+                        )
+                )
+            }
+        })
+}
 
 @ExperimentalComposeUiApi
 @Composable
 fun DishesToolbar(
-    state: DishesFeature.State,
+    title: String,
+    state: DishesState,
     cartCount: Int,
-    accept: (DishesFeature.Msg) -> Unit,
-    navigate: (NavigateCommand) -> Unit
+    accept: (DishesMsg) -> Unit,
+    onCart: () -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
     val inputFlow: MutableSharedFlow<String> = remember { MutableSharedFlow() }
-    LaunchedEffect(key1 = state.isSearch ) {
-        inputFlow
-            .debounce(500)
-            .collect {
-                Log.e("DishesToolbar", "collect")
-                accept(DishesFeature.Msg.UpdateSuggestionResult(it))
-            }
+
+    LaunchedEffect(key1 = state.isSearch) {
+        scope.launch {
+            inputFlow
+                .debounce(500)
+                .collect { accept(DishesMsg.UpdateSuggestionResult(it)) }
+        }
+
     }
+
 
     SearchToolbar(
         input = state.input,
         cartCount = cartCount,
         isSearch = state.isSearch,
-        title = "Все блюда",
+        title = title,
         suggestions = state.suggestions,
         onInput = {
-            accept(DishesFeature.Msg.SearchInput(it))
+            accept(DishesMsg.SearchInput(it))
             scope.launch { inputFlow.emit(it) }
         },
-        onSubmit = { accept(DishesFeature.Msg.SearchSubmit(it)) },
-        onSuggestionClick = { accept(DishesFeature.Msg.SuggestionSelect(it)) },
-        onSearchToggle = { accept(DishesFeature.Msg.SearchToggle) },
-        onCartClick = { navigate(NavigateCommand.ToCart) }
+        onSubmit = { accept(DishesMsg.SearchSubmit(it)) },
+        onSuggestionClick = { accept(DishesMsg.SuggestionSelect(it)) },
+        onSearchToggle = { accept(DishesMsg.SearchToggle) },
+        onCartClick = onCart
     )
 }
 
@@ -80,14 +162,26 @@ fun SearchToolbar(
     cartCount: Int = 0,
     isSearch: Boolean = false,
     suggestions: Map<String, Int> = emptyMap(),
-    onInput: (query: String) -> Unit,
-    onSubmit: (query: String) -> Unit,
-    onSuggestionClick: (query: String) -> Unit,
-    onSearchToggle: () -> Unit,
+    onInput: ((query: String) -> Unit)? = null,
+    onSubmit: ((query: String) -> Unit)? = null,
+    onSuggestionClick: ((query: String) -> Unit)? = null,
+    onSearchToggle: (() -> Unit)? = null,
     onCartClick: () -> Unit
 ) {
-    Column {
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current!!.onBackPressedDispatcher
+    Column() {
         TopAppBar(
+            navigationIcon = {
+                IconButton(
+                    onClick = { dispatcher.onBackPressed() },
+                    content = {
+                        Icon(
+                            tint = MaterialTheme.colors.secondary,
+                            painter = painterResource(R.drawable.ic_baseline_arrow_back_24),
+                            contentDescription = "back"
+                        )
+                    })
+            },
             title = {
                 if (!isSearch) Text(
                     text = title,
@@ -101,7 +195,7 @@ fun SearchToolbar(
             },
             actions = {
                 IconButton(
-                    onClick = { onSearchToggle() },
+                    onClick = { onSearchToggle?.invoke() },
                     content = {
                         Icon(
                             tint = if (!isSearch) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary,
@@ -109,7 +203,7 @@ fun SearchToolbar(
                             contentDescription = null
                         )
                     })
-                CartButton(cartCount = cartCount, onCartClick = onCartClick)
+                CartButton(cartCount = cartCount, onCart = onCartClick)
             }
         )
         if (suggestions.isNotEmpty()) {
@@ -130,7 +224,7 @@ fun SearchToolbar(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onSuggestionClick(it.key) }
+                                    .clickable { onSuggestionClick?.invoke(it.key) }
                                     .padding(16.dp, vertical = 4.dp)) {
                                 Text(
                                     text = it.key,
@@ -170,13 +264,6 @@ private fun CustomSearchField(
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-
-
-    //TOD request focus
-    /* DisposableEffect(Unit) {
-         focusRequester.requestFocus()
-         onDispose { }
-     }*/
 
     val decoratedPlaceholder: @Composable ((Modifier) -> Unit)? =
         if (input.isEmpty()) {
@@ -237,7 +324,7 @@ private fun CustomSearchField(
 @Composable
 fun IdleToolbarPreview() {
     AppTheme {
-        DishesToolbar(DishesFeature.State(), 5, {}, {})
+        DishesToolbar("test", DishesState(title = ""), 5, {}, {})
     }
 
 }
@@ -247,7 +334,12 @@ fun IdleToolbarPreview() {
 @Composable
 fun SearchToolbarPreview() {
     AppTheme {
-        DishesToolbar(DishesFeature.State(input = "search test", isSearch = true), 0, {}, {})
+        DishesToolbar(
+            "test",
+            DishesState(input = "search test", isSearch = true, title = ""),
+            0,
+            {},
+            {})
     }
 
 }
@@ -259,10 +351,12 @@ fun SuggestionsToolbarPreview() {
     AppTheme {
         Box(Modifier.height(160.dp)) {
             DishesToolbar(
-                DishesFeature.State(
+                "",
+                DishesState(
+                    title = "",
                     input = "search test",
                     isSearch = true,
-                    suggestions = mapOf("test" to 4, "search" to 2)
+                    suggestions = mapOf("test" to 4, "search" to 2),
                 ), 0, {}, {})
         }
 
@@ -270,4 +364,18 @@ fun SuggestionsToolbarPreview() {
 
 }
 
+@Preview
+@Composable
+fun CanBackDefaultToolbarPreview() {
+    AppTheme {
+        DefaultToolbar("Can back", 0, true, {}, {})
+    }
+}
 
+@Preview
+@Composable
+fun ToplevelDefaultToolbarPreview() {
+    AppTheme {
+        DefaultToolbar("Can back", 10, false, {}, {})
+    }
+}

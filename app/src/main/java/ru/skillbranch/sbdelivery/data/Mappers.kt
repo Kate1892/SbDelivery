@@ -1,11 +1,11 @@
 package ru.skillbranch.sbdelivery.data
 
-import ru.skillbranch.sbdelivery.data.db.entity.CartItemDbView
-import ru.skillbranch.sbdelivery.data.db.entity.DishPersist
+import ru.skillbranch.sbdelivery.data.db.entity.*
 import ru.skillbranch.sbdelivery.data.network.res.DishRes
-import ru.skillbranch.sbdelivery.screens.cart.data.CartItem
-import ru.skillbranch.sbdelivery.screens.dish.data.DishContent
-import ru.skillbranch.sbdelivery.screens.dishes.data.DishItem
+import ru.skillbranch.sbdelivery.domain.CategoryItem
+import ru.skillbranch.sbdelivery.domain.Dish
+import ru.skillbranch.sbdelivery.domain.DishItem
+import ru.skillbranch.sbdelivery.domain.CartItem
 
 fun DishRes.toDishPersist(): DishPersist = DishPersist(
     id,
@@ -23,16 +23,41 @@ fun DishRes.toDishPersist(): DishPersist = DishPersist(
     updatedAt
 )
 
-fun DishPersist.toDishItem() : DishItem = DishItem(id, image, "$price", title=name)
+fun CartItemDV.toCartItem(): CartItem = CartItem(dishId, image, title, count, price)
 
-fun DishPersist.toDishContent(): DishContent =
-    DishContent(
-        id = id,
-        image = image,
-        title = name,
-        description = description,
-        price = price,
-        oldPrice = oldPrice
-    )
+fun DishPersist.toDishItem(): DishItem = DishItem(
+    id = id,
+    image = image,
+    price = "$price",
+    title = name,
+    isSale = oldPrice?.let { true } ?: false
+)
 
-fun CartItemDbView.toCartItem(): CartItem = CartItem(dishId, image, title, count, price)
+fun DishDV.toDish() = Dish(
+    id = id,
+    title = title,
+    description = description,
+    image = image,
+    oldPrice = oldPrice,
+    price = price,
+    rating = rating,
+    isFavorite = isFavorite,
+)
+
+
+fun DishItemDV.toDishItem() = DishItem(
+    id = id,
+    image = image,
+    price = price,
+    title = title,
+    isSale = isSale,
+    isFavorite = isFavorite
+)
+
+fun CategoryItemDV.toCategoryItem() = CategoryItem(
+    id = id,
+    title = title,
+    icon = icon,
+    order = order,
+    parentId = parentId
+)
